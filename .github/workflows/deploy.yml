@@ -1,0 +1,30 @@
+name: Deploy to QA
+
+on:
+  push:
+    branches:
+      - master 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: docker build -t aalopezb/hello-world:latest .
+
+      - name: Push Docker image to Docker Hub
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USER}" --password-stdin
+          docker push aalopezb/hello-world:latest
+
+      - name: Deploy to QA Load Balancer
+        run: |
+          curl -X POST http://QA-LoadBalancer-543566857.us-east-1.elb.amazonaws.com/deploy \
+          -H "Content-Type: application/json" \
+          -d '{"image": "aalopezb/hello-world:latest"}'
